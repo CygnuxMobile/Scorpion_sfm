@@ -48,7 +48,6 @@ class AttendanceController extends GetxController {
           attendanceApiStatus.value = ApiStatus.success;
         }
 
-        // Parse punch-in time
         if (attendanceResponse.data.isPunchIn) {
           punchInDateTime = DateFormat('MM/dd/yyyy HH:mm:ss').parse(attendanceResponse.data.punchIn);
           punchInTime.value = DateFormat('hh:mm:ss a').format(punchInDateTime);
@@ -60,7 +59,6 @@ class AttendanceController extends GetxController {
           print(">>>>>>>>>>>in");
         }
 
-        // Parse punch-out time
         if (attendanceResponse.data.isPunchOut) {
           punchOutDateTime = DateFormat('MM/dd/yyyy HH:mm:ss').parse(attendanceResponse.data.punchOut);
           punchOutTime.value = DateFormat('hh:mm:ss a').format(punchOutDateTime);
@@ -69,7 +67,6 @@ class AttendanceController extends GetxController {
           await pref!.setBool(LocalStorageKey.isPunchOut, attendanceResponse.data.isPunchOut);
         }
 
-        // Calculate total time
         if (punchInDateTime != null && punchOutDateTime != null) {
           Duration duration = punchOutDateTime.difference(punchInDateTime);
           totalTime.value =
@@ -95,7 +92,6 @@ class AttendanceController extends GetxController {
         final responseData = response.data;
 
         if (responseData["success"] == true) {
-          // ✅ Success case
           if (isPunchIn) {
             toastMessage(text: "Punch-in successful!", color: AppColors.greenColor);
             isPunchedIn.value = true;
@@ -106,7 +102,6 @@ class AttendanceController extends GetxController {
 
           attendanceStatus(loading: false);
         } else {
-          // ❌ API says failed → show API message
           final errorMessage = responseData["error"]?["message"] ?? "Failed to record attendance. Please try again.";
           toastMessage(text: errorMessage, color: AppColors.redColor);
         }
@@ -125,27 +120,45 @@ class AttendanceController extends GetxController {
   Future<double> getDrivingDistance({required String origin, required String destination}) async {
     ApiHandler.logger.i("Driving Distance API Enter: $origin to $destination");
 
-    final url =
-        'https://maps.googleapis.com/maps/api/distancematrix/json?origins=$origin&destinations=$destination&avoid=ferries&mode=driving&key=AIzaSyAMPBtu5A1HbgJuxwzj-y6mcqCIj0vf5cA';
+    List<String> originParts = origin.split(',');
+    List<String> destParts = destination.split(',');
+    String originLat = originParts[0];
+    String originLng = originParts[1];
+    String destLat = destParts[0];
+    String destLng = destParts[1];
+
+    final url = 'https://scorpion.nextapi.in/api/get/distance?api_key=zck096ek4f43bza1rscb&origin_lat=$originLat&origin_lng=$originLng&dest_lat=$destLat&dest_lng=$destLng';
+    ApiHandler.logger.i("Driving Distance URL: $url");
+
+    // final url =
+    //     'https://maps.googleapis.com/maps/api/distancematrix/json?origins=$origin&destinations=$destination&avoid=ferries&mode=driving&key=AIzaSyAMPBtu5A1HbgJuxwzj-y6mcqCIj0vf5cA';
 
     try {
-      final response = await http.get(Uri.parse(url));
+      final response = await http.get(Uri.parse(url), headers: {'Accept': 'application/json'});
+      ApiHandler.logger.i("Driving Distance Response: ${response.body}");
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         ApiHandler.logger.i("Driving Distance Response: ${response.body}");
 
-        if (data['status'] == 'OK' &&
-            data['rows'] != null &&
-            data['rows'].isNotEmpty &&
-            data['rows'][0]['elements'] != null &&
-            data['rows'][0]['elements'].isNotEmpty &&
-            data['rows'][0]['elements'][0]['status'] == 'OK') {
-          final distanceMeters = data['rows'][0]['elements'][0]['distance']['value'];
-          return distanceMeters / 1000; // KM માં return
+        if (data['success'] == true && data['data'] != null) {
+          final distanceKm = double.tryParse(data['data']['distance_km'].toString()) ?? 0.0;
+          return distanceKm;
         } else {
-          ApiHandler.logger.e("Distance data not found or status not OK: ${data['status']}");
+          ApiHandler.logger.e("Distance data not found or success is false");
         }
+
+        // if (data['status'] == 'OK' &&
+        //     data['rows'] != null &&
+        //     data['rows'].isNotEmpty &&
+        //     data['rows'][0]['elements'] != null &&
+        //     data['rows'][0]['elements'].isNotEmpty &&
+        //     data['rows'][0]['elements'][0]['status'] == 'OK') {
+        //   final distanceMeters = data['rows'][0]['elements'][0]['distance']['value'];
+        //   return distanceMeters / 1000; // KM માં return
+        // } else {
+        //   ApiHandler.logger.e("Distance data not found or status not OK: ${data['status']}");
+        // }
       } else {
         ApiHandler.logger.e("HTTP Error: ${response.statusCode}");
       }
@@ -157,19 +170,37 @@ class AttendanceController extends GetxController {
   }
 
   Future<String> getFullAddressFromLatLng({required double latitude, required double longitude}) async {
-    final String url =
-        "https://maps.googleapis.com/maps/api/geocode/json"
-        "?latlng=$latitude,$longitude"
-        "&key=AIzaSyAMPBtu5A1HbgJuxwzj-y6mcqCIj0vf5cA";
+    final String url = 'https://scorpion.nextapi.in/api/get/address?lat=$latitude&lng=$longitude&api_key=zck096ek4f43bza1rscb';
+    ApiHandler.logger.i("Get Address URL: $url");
 
-    final response = await ApiHandler.getRequest(url);
+    // final String url =
+    //     "https://maps.googleapis.com/maps/api/geocode/json"
+    //     "?latlng=$latitude,$longitude"
+    //     "&key=AIzaSyAMPBtu5A1HbgJuxwzj-y6mcqCIj0vf5cA";
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.data);
+    try {
+      final response = await http.get(Uri.parse(url), headers: {'Accept': 'application/json'});
+      ApiHandler.logger.i("Get Address Response: ${response.body}");
 
-      if (data["results"] != null && data["results"].isNotEmpty) {
-        return data["results"][0]["formatted_address"];
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        if (data["success"] == true && data["data"] != null) {
+          return data["data"]["address"] ?? "Address not found";
+        }
       }
+
+      // final response = await ApiHandler.getRequest(url);
+      //
+      // if (response.statusCode == 200) {
+      //   final data = json.decode(response.data);
+      //
+      //   if (data["results"] != null && data["results"].isNotEmpty) {
+      //     return data["results"][0]["formatted_address"];
+      //   }
+      // }
+    } catch (e) {
+      ApiHandler.logger.e("Failed to fetch address: $e");
     }
 
     return "Address not found";
