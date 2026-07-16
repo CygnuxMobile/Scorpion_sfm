@@ -688,7 +688,7 @@ class _AddComplaintScreenState extends State<AddComplaintScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
                               ElevatedButton(
-                                onPressed: () async {
+                                onPressed: addComplaintController.isLoading.value ? null : () async {
                                   if (formKey.currentState!.validate()) {
                                     if (addComplaintController.selectedAssign.value == null) {
                                       Fluttertoast.showToast(

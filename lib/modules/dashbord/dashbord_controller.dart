@@ -16,7 +16,7 @@ class DashboardController extends GetxController {
   RxBool isAllMenu = false.obs;
   RxBool isComplainMenu = false.obs;
   RxBool isLoading = false.obs;
-  RxString version = '1.1.5'.obs;
+  RxString version = '1.1.7'.obs;
 
   Future<void> getMenu({bool loading = false, Map<String, dynamic>? data}) async {
     if (loading) {

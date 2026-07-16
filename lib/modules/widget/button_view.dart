@@ -19,7 +19,7 @@ Widget commonButton({
   loaderColorWhite = false,
 }) {
   return GestureDetector(
-    onTap: onTap,
+    onTap: isLoader ? null : onTap,
     child: Center(
       child: SizedBox(
         height: Get.width > 767.00 ? height ?? 80 : height ?? 50,

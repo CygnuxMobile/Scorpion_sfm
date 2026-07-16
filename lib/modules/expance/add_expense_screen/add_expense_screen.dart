@@ -473,7 +473,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                                             actions: [
                                               Obx(() {
                                                 return ElevatedButton(
-                                                  onPressed: () async {
+                                                  onPressed: addExpenseController.isApproveLoading.value ? null : () async {
                                                     if (formKey2.currentState!.validate()) {
                                                       await addExpenseController.statesApproved(
                                                         expenseId: "${widget.id}",
@@ -579,7 +579,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                                             actions: [
                                               Obx(() {
                                                 return ElevatedButton(
-                                                  onPressed: () async {
+                                                  onPressed: addExpenseController.isApproveLoading.value ? null : () async {
                                                     if (formKey2.currentState!.validate()) {
                                                       await addExpenseController.statesApproved(
                                                         expenseId: "${widget.id}",

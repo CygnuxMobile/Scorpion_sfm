@@ -186,7 +186,6 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         return;
       }
     }
-    attendanceController.isLoading.value = false;
     onSuccess();
   }
 
@@ -253,8 +252,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                       attendanceController.isPunchedIn.isTrue
                                   ? null
                                   : () {
+                                      attendanceController.isLoading.value = true;
                                       checkGpsAndPermission(context, () async {
-                                        attendanceController.isLoading.value = true;
 
                                         Position position = await Geolocator.getCurrentPosition(
                                           desiredAccuracy: LocationAccuracy.high,
@@ -306,9 +305,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                                       attendanceController.isPunchedIn.isFalse
                                   ? null
                                   : () {
+                                      attendanceController.isLoading.value = true;
                                       var km = 0.0;
                                       checkGpsAndPermission(context, () async {
-                                        attendanceController.isLoading.value = true;
 
                                         Position position = await Geolocator.getCurrentPosition(
                                           desiredAccuracy: LocationAccuracy.high,

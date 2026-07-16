@@ -168,7 +168,7 @@ class _MeetingMomScreenState extends State<MeetingMomScreen> {
                     ),
                     if(item.controller.selectedItems.isNotEmpty)
                     commonButton(name: "Submit", bgColor: AppColors.primaryColor, onTap: () async {
-
+                      if (item.isLoading.value) return;
                       if(item.remarksController.value.text.isEmpty){
                         toastMessage(text: "Please enter remarks", color: AppColors.redColor);
                       }else if(item.controller.selectedItems.isEmpty){

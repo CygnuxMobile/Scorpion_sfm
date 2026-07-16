@@ -947,7 +947,7 @@ class AddMeetingScreenState extends State<AddMeetingScreen> {
                   Obx(() {
                     return Center(
                       child: ElevatedButton(
-                        onPressed: () async {
+                        onPressed: addMeetingController.isLoading.value ? null : () async {
                           if (!await ApiHandler.hasInternet()) {
                             toastMessage(text: "No internet connection", color: AppColors.redColor);
                             return;

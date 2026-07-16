@@ -217,6 +217,22 @@ class LoginScreenState extends State<LoginScreen> {
                             ),
                     ),*/
                       ),
+                  const SizedBox(height: 40),
+                  Center(
+                    child: Column(
+                      children: [
+                        const Text(
+                          "Device ID:",
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black54),
+                        ),
+                        const SizedBox(height: 4),
+                        SelectableText(
+                          loginController.deviceId.value.isEmpty ? "Fetching..." : loginController.deviceId.value,
+                          style: const TextStyle(fontSize: 14, color: AppColors.primaryColor, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             );

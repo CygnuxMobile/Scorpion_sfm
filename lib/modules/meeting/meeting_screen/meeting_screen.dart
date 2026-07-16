@@ -126,7 +126,6 @@ class _MyMeetingScreenState extends State<MyMeetingScreen> {
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
       permission = await Geolocator.requestPermission();
-      meetingController.meetingData[index].isLoading.value = false;
       if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
         meetingController.meetingData[index].isLoading.value = false;
         showDialog(
@@ -354,11 +353,14 @@ class _MyMeetingScreenState extends State<MyMeetingScreen> {
                                                     children: [
                                                       if (data.meeting.value != AttendanceStatus.completed && meetingController.isShowAll.isFalse)
                                                         ElevatedButton(
-                                                          onPressed: meetingController.meetingData[index].isLoading.isFalse
-                                                              ? () async {
+                                                          onPressed: meetingController.meetingData[index].isLoading.value
+                                                              ? null
+                                                              : () async {
+                                                                  meetingController.meetingData[index].isLoading.value = true;
                                                                   bool isPunchedOut = Pref.getPunchOut() ?? false;
                                                                   if (data.meeting.value == AttendanceStatus.checkIn) {
                                                                     if (isPunchedOut) {
+                                                                      meetingController.meetingData[index].isLoading.value = false;
                                                                       toastMessage(text: "You have already checked out.");
                                                                       return;
                                                                     }
@@ -366,112 +368,124 @@ class _MyMeetingScreenState extends State<MyMeetingScreen> {
                                                                   checkGpsAndPermission(context, () async {
                                                                     bool isPunchedIn = Pref.getPunchIn() ?? false;
                                                                     if (isPunchedIn) {
-                                                                      meetingController.meetingData[index].isLoading.value = false;
                                                                       showDialog(
                                                                         context: Get.context!,
+                                                                        barrierDismissible: false,
                                                                         barrierColor: AppColors.greyColor.withOpacity(0.7),
                                                                         builder: (context) {
-                                                                          return AlertDialog(
-                                                                            surfaceTintColor: AppColors.mediumBlackColor,
-                                                                            backgroundColor: AppColors.whiteColor,
-                                                                            shape: RoundedRectangleBorder(
-                                                                              side: const BorderSide(color: AppColors.transparentColor, width: 0.5),
-                                                                              borderRadius: BorderRadius.circular(12),
-                                                                            ),
-                                                                            content: Column(
-                                                                              mainAxisSize: MainAxisSize.min,
-                                                                              children: [
-                                                                                const SizedBox(height: 10),
-                                                                                Image.asset(AppImages.appLogo, scale: 8),
-                                                                                const SizedBox(height: 10),
-                                                                                const Divider(color: AppColors.grey),
-                                                                                Text(data.meeting.value == AttendanceStatus.checkIn ? "Check In" : "Check Out", style: AppTextStyle.bold.copyWith(fontSize: 20)),
-                                                                                const SizedBox(height: 10),
-                                                                                Text(
-                                                                                  "Are you sure want to ${data.meeting.value == AttendanceStatus.checkIn ? "Check In" : "Check Out"}?",
-                                                                                  textAlign: TextAlign.center,
-                                                                                  style: AppTextStyle.regular.copyWith(fontSize: 14),
-                                                                                ),
-                                                                              ],
-                                                                            ),
-                                                                            actions: [
-                                                                              Row(
+                                                                          return PopScope(
+                                                                            canPop: true,
+                                                                            onPopInvoked: (v) {
+                                                                              meetingController.meetingData[index].isLoading.value = false;
+                                                                            },
+                                                                            child: AlertDialog(
+                                                                              surfaceTintColor: AppColors.mediumBlackColor,
+                                                                              backgroundColor: AppColors.whiteColor,
+                                                                              shape: RoundedRectangleBorder(
+                                                                                side: const BorderSide(color: AppColors.transparentColor, width: 0.5),
+                                                                                borderRadius: BorderRadius.circular(12),
+                                                                              ),
+                                                                              content: Column(
+                                                                                mainAxisSize: MainAxisSize.min,
                                                                                 children: [
-                                                                                  Expanded(
-                                                                                    child: commonButton(
-                                                                                      name: "Cancel",
-                                                                                      textColor: AppColors.primaryColor,
-                                                                                      bgColor: AppColors.whiteColor,
-                                                                                      borderColor: AppColors.primaryColor,
-                                                                                      onTap: () {
-                                                                                        meetingController.meetingData[index].isLoading.value = false;
-                                                                                        Get.back();
-                                                                                      },
-                                                                                    ),
+                                                                                  const SizedBox(height: 10),
+                                                                                  Image.asset(AppImages.appLogo, scale: 8),
+                                                                                  const SizedBox(height: 10),
+                                                                                  const Divider(color: AppColors.grey),
+                                                                                  Text(data.meeting.value == AttendanceStatus.checkIn ? "Check In" : "Check Out", style: AppTextStyle.bold.copyWith(fontSize: 20)),
+                                                                                  const SizedBox(height: 10),
+                                                                                  Text(
+                                                                                    "Are you sure want to ${data.meeting.value == AttendanceStatus.checkIn ? "Check In" : "Check Out"}?",
+                                                                                    textAlign: TextAlign.center,
+                                                                                    style: AppTextStyle.regular.copyWith(fontSize: 14),
                                                                                   ),
-                                                                                  const SizedBox(width: 20),
-                                                                                  Obx(() {
-                                                                                    return Expanded(
+                                                                                ],
+                                                                              ),
+                                                                              actions: [
+                                                                                Row(
+                                                                                  children: [
+                                                                                    Expanded(
                                                                                       child: commonButton(
-                                                                                        loaderColorWhite: true,
-                                                                                        isLoader: meetingController.isCheckInOutLoading.isFalse ? false : true,
-                                                                                        name: data.meeting.value == AttendanceStatus.checkIn ? "Check In" : "Check Out",
-                                                                                        bgColor: AppColors.primaryColor,
-                                                                                        onTap: () async {
-                                                                                          double km = 0.0;
-                                                                                          meetingController.isCheckInOutLoading.value = true;
-
-                                                                                          Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-
-                                                                                          if (data.meeting.value == AttendanceStatus.checkIn) {
-                                                                                            km = await meetingController.getDrivingDistance(
-                                                                                              origin: "${data.previousLatitude},${data.previousLongitude}",
-                                                                                              destination: "${position.latitude},${position.longitude}",
-                                                                                            );
-
-                                                                                            print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>$km");
-                                                                                            meetingController.isCheckInOutLoading.value = false;
-                                                                                          }
-
-                                                                                          String address = await meetingController.getFullAddressFromLatLng(latitude: position.latitude, longitude: position.longitude);
-
-                                                                                          debugPrint("========================= $address");
-                                                                                          meetingController
-                                                                                              .checkInOut(
-                                                                                                data: {
-                                                                                                  "meetingID": data.meetingId,
-                                                                                                  "userID": Pref.getUserId(),
-                                                                                                  "isAttendee": true,
-                                                                                                  "date": DateFormat('dd/MM/yyyy').format(DateTime.now()),
-                                                                                                  "checkIn": data.meeting.value == AttendanceStatus.checkIn ? DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now()) : '',
-                                                                                                  "checkOut": data.meeting.value == AttendanceStatus.checkOut ? DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now()) : '',
-                                                                                                  "lat": position.latitude,
-                                                                                                  "lng": position.longitude,
-                                                                                                  "GeoLocation": address,
-                                                                                                  "attendeeCode": data.attendeeCode,
-                                                                                                  "distanceInKM": km,
-                                                                                                },
-                                                                                                loading: true,
-                                                                                                index: index,
-                                                                                              )
-                                                                                              .whenComplete(() {
-                                                                                                meetingController.isCheckInOutLoading.value = false;
-                                                                                                Get.back();
-                                                                                              });
+                                                                                        name: "Cancel",
+                                                                                        textColor: AppColors.primaryColor,
+                                                                                        bgColor: AppColors.whiteColor,
+                                                                                        borderColor: AppColors.primaryColor,
+                                                                                        onTap: () {
+                                                                                          meetingController.meetingData[index].isLoading.value = false;
+                                                                                          Get.back();
                                                                                         },
                                                                                       ),
-                                                                                    );
-                                                                                    /*: const Padding(
+                                                                                    ),
+                                                                                    const SizedBox(width: 20),
+                                                                                    Obx(() {
+                                                                                      return Expanded(
+                                                                                        child: commonButton(
+                                                                                          loaderColorWhite: true,
+                                                                                          isLoader: meetingController.isCheckInOutLoading.isFalse ? false : true,
+                                                                                          name: data.meeting.value == AttendanceStatus.checkIn ? "Check In" : "Check Out",
+                                                                                          bgColor: AppColors.primaryColor,
+                                                                                          onTap: () async {
+                                                                                            if (meetingController.isCheckInOutLoading.value) return;
+                                                                                            double km = 0.0;
+                                                                                            meetingController.isCheckInOutLoading.value = true;
+
+                                                                                            Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+
+                                                                                            if (data.meeting.value == AttendanceStatus.checkIn) {
+                                                                                              if (data.previousLatitude.isNotEmpty && data.previousLatitude != "-" && data.previousLongitude.isNotEmpty && data.previousLongitude != "-") {
+                                                                                                km = await meetingController.getDrivingDistance(
+                                                                                                  origin: "${data.previousLatitude},${data.previousLongitude}",
+                                                                                                  destination: "${position.latitude},${position.longitude}",
+                                                                                                );
+                                                                                              } else {
+                                                                                                km = 0.0;
+                                                                                                debugPrint("Previous location is empty, skipping distance calculation.");
+                                                                                              }
+
+                                                                                              print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>$km");
+                                                                                              // meetingController.isCheckInOutLoading.value = false;
+                                                                                            }
+
+                                                                                            String address = await meetingController.getFullAddressFromLatLng(latitude: position.latitude, longitude: position.longitude);
+
+                                                                                            debugPrint("========================= $address");
+                                                                                            meetingController
+                                                                                                .checkInOut(
+                                                                                                  data: {
+                                                                                                    "meetingID": data.meetingId,
+                                                                                                    "userID": Pref.getUserId(),
+                                                                                                    "isAttendee": true,
+                                                                                                    "date": DateFormat('dd/MM/yyyy').format(DateTime.now()),
+                                                                                                    "checkIn": data.meeting.value == AttendanceStatus.checkIn ? DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now()) : '',
+                                                                                                    "checkOut": data.meeting.value == AttendanceStatus.checkOut ? DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now()) : '',
+                                                                                                    "lat": position.latitude,
+                                                                                                    "lng": position.longitude,
+                                                                                                    "GeoLocation": address,
+                                                                                                    "attendeeCode": data.attendeeCode,
+                                                                                                    "distanceInKM": km,
+                                                                                                  },
+                                                                                                  loading: true,
+                                                                                                  index: index,
+                                                                                                )
+                                                                                                .whenComplete(() {
+                                                                                                  meetingController.isCheckInOutLoading.value = false;
+                                                                                                  Get.back();
+                                                                                                });
+                                                                                          },
+                                                                                        ),
+                                                                                      );
+                                                                                      /*: const Padding(
                                                                                             padding: EdgeInsets.all(8.0),
                                                                                             child: CircularProgressIndicator(
                                                                                               strokeAlign: 1,
                                                                                               color: AppColors.white,
                                                                                             ),
                                                                                           );*/
-                                                                                  }),
-                                                                                ],
-                                                                              ),
-                                                                            ],
+                                                                                    }),
+                                                                                  ],
+                                                                                ),
+                                                                              ],
+                                                                            ),
                                                                           );
                                                                         },
                                                                       );
@@ -481,8 +495,7 @@ class _MyMeetingScreenState extends State<MyMeetingScreen> {
                                                                       punchingDialog();
                                                                     }
                                                                   }, index);
-                                                                }
-                                                              : () {},
+                                                                },
                                                           style: ElevatedButton.styleFrom(
                                                             backgroundColor: AppColors.primaryColor,
                                                             minimumSize: const Size(130, 40),

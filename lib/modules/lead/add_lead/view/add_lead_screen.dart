@@ -524,7 +524,7 @@ class AddLeadScreenState extends State<AddLeadScreen> {
                       children: [
                         Obx(() {
                           return ElevatedButton(
-                            onPressed: () async {
+                            onPressed: addLeadController.isLoading.value ? null : () async {
                               if (!await ApiHandler.hasInternet()) {
                                 toastMessage(text: "No internet connection", color: AppColors.redColor);
                                 return;

@@ -126,6 +126,7 @@ class MeetingController extends GetxController {
       var response = await ApiHandler.postRequest(url: ApiEndPoint.meetingCheckInOut, body: data);
 
       if (response.statusCode == 200) {
+        debugPrint("CheckInOut API Response Body: ${response.data}");
         if (response.data["success"] == true) {
           if (meetingData[index].meeting.value == AttendanceStatus.checkIn) {
             meetingData[index].meeting.value = AttendanceStatus.checkOut;
@@ -140,22 +141,27 @@ class MeetingController extends GetxController {
             getMeetingData(page: 1, dataClear: true, showAll: isShowAll.value);
           }
         } else {
-          toastMessage(color: AppColors.redColor, text: response.data["error"]["message"]);
+          String errMsg = "Something went wrong!!!";
+          if (response.data["error"] != null && response.data["error"]["message"] != null) {
+            errMsg = response.data["error"]["message"];
+          } else if (response.data["message"] != null) {
+            errMsg = response.data["message"];
+          }
+          toastMessage(color: AppColors.redColor, text: errMsg);
         }
         if (loading) {
-          // meetingData[index].isLoading.value = false;
           isCheckInOutLoading.value = false;
         }
       } else {
         toastMessage(color: AppColors.redColor, text: "Something went wrong!!!");
         if (loading) {
-          // meetingData[index].isLoading.value = false;
           isCheckInOutLoading.value = false;
         }
       }
     } catch (e) {
       if (loading) {
         meetingData[index].isLoading.value = false;
+        isCheckInOutLoading.value = false;
       }
     }
   }
