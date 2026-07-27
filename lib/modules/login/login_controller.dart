@@ -6,6 +6,8 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:scorpforce/modules/login/login_model.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../config/app_colors.dart';
 import '../../config/app_shared_key.dart';
@@ -22,6 +24,13 @@ class LoginController extends GetxController {
   RxBool obSecure = true.obs;
   RxString deviceId = "".obs;
 
+  final _secureStorage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+      sharedPreferencesName: 'PermanentDeviceStorage',
+    ),
+  );
+
   @override
   void onInit() {
     getDeviceId();
@@ -29,31 +38,38 @@ class LoginController extends GetxController {
   }
 
   Future<String> getDeviceId() async {
-    ApiHandler.logger.i("[DEVICE_ID_DEBUG] Starting device ID fetch");
+    ApiHandler.logger.i("[DEVICE_ID_DEBUG] Starting permanent device ID fetch");
+    
+    String? permanentId = await _secureStorage.read(key: 'permanent_device_id');
+    
+    if (permanentId != null && permanentId.isNotEmpty) {
+      ApiHandler.logger.i("[DEVICE_ID_DEBUG] Found existing permanent ID: $permanentId");
+      deviceId.value = permanentId;
+      return permanentId;
+    }
+
     String? finalId;
     try {
       if (Platform.isAndroid) {
-        // android_id package specifically retrieves Settings.Secure.ANDROID_ID
         final androidIdResult = await const AndroidId().getId();
-        ApiHandler.logger.i("[DEVICE_ID_DEBUG] android_id result: $androidIdResult");
-
-        // device_info_plus androidInfo.id is Build.ID (NOT ANDROID_ID)
-        final androidInfo = await DeviceInfoPlugin().androidInfo;
-        ApiHandler.logger.i("[DEVICE_ID_DEBUG] device_info_plus id (Build.ID): ${androidInfo.id}");
-
-        finalId = androidIdResult;
-      } else if (Platform.isIOS) {
-        IosDeviceInfo iosInfo = await DeviceInfoPlugin().iosInfo;
-        finalId = iosInfo.identifierForVendor;
-        ApiHandler.logger.i("[DEVICE_ID_DEBUG] device_info_plus identifierForVendor: $finalId");
+        if (androidIdResult != null && androidIdResult.isNotEmpty) {
+          finalId = androidIdResult;
+        }
       }
-    } catch (e, stackTrace) {
-      ApiHandler.logger.e("[DEVICE_ID_DEBUG] ERROR during fetch: $e");
-      ApiHandler.logger.e("[DEVICE_ID_DEBUG] STACK TRACE: $stackTrace");
-      finalId = "";
+      
+      // If Android ID failed or we are on iOS, generate a UUID
+      if (finalId == null || finalId.isEmpty) {
+        finalId = const Uuid().v4();
+        ApiHandler.logger.i("[DEVICE_ID_DEBUG] Generated new UUID: $finalId");
+      }
+    } catch (e) {
+      finalId = const Uuid().v4();
+      ApiHandler.logger.e("[DEVICE_ID_DEBUG] Error during ID generation, using UUID: $e");
     }
 
-    finalId ??= "";
+    // 3. Save to Secure Storage for future use
+    await _secureStorage.write(key: 'permanent_device_id', value: finalId);
+
     deviceId.value = finalId;
     ApiHandler.logger.i("[DEVICE_ID_DEBUG] Final selected device ID: $finalId");
     return finalId;

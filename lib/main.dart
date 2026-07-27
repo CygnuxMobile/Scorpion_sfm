@@ -16,6 +16,13 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   pref = await SharedPreferences.getInstance();
+
+  if (pref!.getBool('is_not_first_run') == null) {
+    await pref!.clear();
+    pref = await SharedPreferences.getInstance();
+    await pref!.setBool('is_not_first_run', true);
+  }
+
   objectBox = await ObjectBox.create();
   runApp(const MyApp());
 }
