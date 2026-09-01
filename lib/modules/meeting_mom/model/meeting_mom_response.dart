@@ -1,9 +1,12 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:multi_dropdown/multi_dropdown.dart';
+import 'package:scorpforce/modules/expance/add_expense_screen/get_transportmode_responce_model.dart';
 import 'package:scorpforce/modules/meeting/add_meeting_screen/model/momList_response_model.dart';
+import 'package:scorpforce/modules/my_call/add_my_call_screen/call_module_response_model.dart';
 
 MeetingMom meetingMomFromJson(String str) => MeetingMom.fromJson(json.decode(str));
 
@@ -35,6 +38,7 @@ class MeetingMom {
 
 class MeetingMomDatum {
   final String meetingId;
+  final String attendeeCode;
   final String meetingMom;
   final String meetingDate;
   final String remarks;
@@ -48,8 +52,16 @@ class MeetingMomDatum {
   RxBool isLoading = false.obs;
   Rx<TextEditingController> remarksController;
 
+  Rx<TransportMode?> selectedTransportMode = Rx<TransportMode?>(null);
+  Rx<String?> transportId = Rx<String?>(null);
+  Rx<CallType?> selectedOtherExpense = Rx<CallType?>(null);
+  Rx<String?> otherExpenseId = Rx<String?>(null);
+  Rx<TextEditingController> expenseAmountController = TextEditingController().obs;
+  Rx<File?> expenseDocumentFile = Rx<File?>(null);
+
   MeetingMomDatum({
     required this.meetingId,
+    required this.attendeeCode,
     required this.meetingMom,
     required this.meetingDate,
     required this.remarks,
@@ -66,6 +78,7 @@ class MeetingMomDatum {
 
   factory MeetingMomDatum.fromJson(Map<String, dynamic> json) => MeetingMomDatum(
     meetingId: json["meetingId"] ?? '',
+    attendeeCode: json["attendeeCode"] ?? '',
     meetingMom: json["meetingMOM"] ?? '',
     meetingDate: json["meetingDate"] ?? '',
     remarks: json["remarks"] ?? '',
@@ -82,6 +95,7 @@ class MeetingMomDatum {
 
   Map<String, dynamic> toJson() => {
     "meetingId": meetingId,
+    "attendeeCode": attendeeCode,
     "meetingMOM": meetingMom,
     "meetingDate": meetingDate,
     "remarks": remarks,

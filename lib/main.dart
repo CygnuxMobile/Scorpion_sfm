@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:scorpforce/config/app_colors.dart';
 import 'package:scorpforce/config/app_routes.dart';
 import 'package:scorpforce/data/local/objectbox.dart';
 import 'package:scorpforce/utils/get_page.dart';
@@ -63,7 +64,7 @@ class MyAppState extends State<MyApp> {
                 ],
               );
             },
-            color: context.theme.colorScheme.primary,
+            color: AppColors.primaryColor,
             debugShowCheckedModeBanner: false,
             getPages: getPages,
             initialRoute: AppRoutes.splashScreen,

@@ -1,0 +1,4 @@
+- [x] Fix Navigator assertion error by wrapping initialization logic in `addPostFrameCallback`
+- [x] Refactor `main.dart` to avoid accessing theme via context in the root builder
+- [x] Update `submitMeetingMom` API in `meeting_mom_controller.dart` to match the new format
+- [x] Verify the changes

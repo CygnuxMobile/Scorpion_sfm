@@ -419,7 +419,7 @@ class AddLeadScreenState extends State<AddLeadScreen> {
                   ),
                   Obx(() {
                       return MultiDropdown(
-                        closeOnBackButton: true,
+                        closeOnBackButton: false,
                         items: addLeadController.serviceList.value!.map((e) {
                           return DropdownItem(label: e.codeDesc, value: e);
                         }).toList(),

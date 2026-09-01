@@ -1,0 +1,7 @@
+- [x] Create `SplashController` for navigation logic
+- [x] Update `SplashBinding` to inject `SplashController`
+- [x] Fix `Obx` placement in `AddMeetingScreen` (Customer Name)
+- [x] Fix `Obx` placement in `AddMeetingScreen` (Meeting Type)
+- [x] Fix `Obx` placement in `AddMeetingScreen` (Meeting Location)
+- [x] Fix `Obx` placement in `AddMeetingScreen` (Transport Mode)
+- [x] Fix `Obx` placement in `AddMeetingScreen` (Other Expenses)

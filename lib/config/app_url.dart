@@ -80,5 +80,5 @@ class ApiEndPoint {
   static String meetingCheckIn = "${baseUrl}meeting/checkin";
   static String momList = "${baseUrl}Meeting/momlist";
   static String meetingMomList = "${baseUrl}Meeting/Pending-Mom";
-  static String submitMeetingMom = "${baseUrl}Meeting/SubmitMom?UserId=";
+  static String submitMeetingMom = "${baseUrl}Meeting/SubmitMom";
 }

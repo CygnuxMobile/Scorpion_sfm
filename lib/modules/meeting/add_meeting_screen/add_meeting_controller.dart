@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:dio/dio.dart' as d;
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:multi_dropdown/multi_dropdown.dart';
 import 'package:scorpforce/config/app_colors.dart';
 import 'package:scorpforce/config/app_shared_key.dart';
 import 'package:scorpforce/config/app_url.dart';
+import 'package:scorpforce/modules/expance/add_expense_screen/get_transportmode_responce_model.dart';
 import 'package:scorpforce/data/local/dropdown_local_db.dart';
 import 'package:scorpforce/data/local/mapper/assigned_user_mapper.dart';
 import 'package:scorpforce/data/local/mapper/branch_mapper.dart';
@@ -91,6 +93,49 @@ class AddMeetingController extends GetxController {
   DateTime selectedDate = DateTime.now();
   RxBool isAllDayEvent = false.obs;
   RxBool isLoading = false.obs;
+  RxList<TransportMode> transportModeList = <TransportMode>[].obs;
+  Rx<String?> transportId = Rx<String?>(null);
+  Rx<TransportMode?> selectedTransportMode = Rx<TransportMode?>(null);
+  RxBool isTransportLoading = false.obs;
+
+  RxList<CallType> otherExpensesList = <CallType>[].obs;
+  Rx<String?> otherExpenseId = Rx<String?>(null);
+  Rx<CallType?> selectedOtherExpense = Rx<CallType?>(null);
+  RxBool isOtherExpenseLoading = false.obs;
+
+  Rx<TextEditingController> expenseAmountController = TextEditingController().obs;
+  Rx<File?> expenseDocumentFile = Rx<File?>(null);
+
+  Future<void> getTransportMode({bool showLoader = false}) async {
+    try {
+      if (showLoader) isTransportLoading.value = true;
+      var response = await ApiHandler.getRequest("${ApiEndPoint.generalMaster}?codeType=SERCAT");
+      if (response.statusCode == 200) {
+        GetTransportModeResponseModel getTransportModeResponseModel = getTransportModeResponseModelFromJson(response.data);
+        transportModeList.value = getTransportModeResponseModel.data;
+      }
+    } catch (e) {
+      debugPrint("Transport Mode API Error: $e");
+    } finally {
+      isTransportLoading.value = false;
+    }
+  }
+
+  Future<void> getOtherExpensesList({bool showLoader = false}) async {
+    try {
+      if (showLoader) isOtherExpenseLoading.value = true;
+      var response = await ApiHandler.getRequest("${ApiEndPoint.genralmaster}OTHEREXPENSES");
+      if (response.statusCode == 200) {
+        final model = callModuleResponseModelFromJson(response.data);
+        otherExpensesList.assignAll(model.data);
+      }
+    } catch (e) {
+      debugPrint("Other Expenses API Error: $e");
+    } finally {
+      isOtherExpenseLoading.value = false;
+    }
+  }
+
   RxBool isCustomerLoading = false.obs;
   RxBool isCustomerDetailLoading = false.obs;
 
@@ -120,6 +165,12 @@ class AddMeetingController extends GetxController {
     selectedBranch.value = null;
 
     selectedUser.value = null;
+    selectedTransportMode.value = null;
+    transportId.value = null;
+    selectedOtherExpense.value = null;
+    otherExpenseId.value = null;
+    expenseAmountController.value.clear();
+    expenseDocumentFile.value = null;
     isLoading.value = false;
     startTime.value = "";
     endTime.value = "";
@@ -156,7 +207,7 @@ class AddMeetingController extends GetxController {
     }
   }
 
-  Future<void> getCustomerDetail({ String customerCode = ''}) async {
+  Future<void> getCustomerDetail({String customerCode = ''}) async {
     isCustomerDetailLoading.value = true;
     var response = await ApiHandler.getRequest("${ApiEndPoint.getCustomerDetail}$customerCode");
 
@@ -170,14 +221,12 @@ class AddMeetingController extends GetxController {
         emailIdController.value.text = data["data"][0]["Email"] ?? "";
       }
       isCustomerDetailLoading.value = false;
-
     } else {
       debugPrint("Not Added");
       debugPrint("${response.statusCode}");
-        isCustomerDetailLoading.value = false;
-
-    }
       isCustomerDetailLoading.value = false;
+    }
+    isCustomerDetailLoading.value = false;
   }
 
   Future<void> getMeetingType({bool showLoader = false}) async {
@@ -274,38 +323,93 @@ class AddMeetingController extends GetxController {
     }
   }
 
-  Future<void> addMeeting({bool loading = false, required Map<String, dynamic> data, bool isUpdate = false, String? id, MultiSelectController? a}) async {
-    debugPrint("Meeting data = ${data}");
+  Future<void> addMeeting({
+    bool loading = false,
+    required Map<String, dynamic> data,
+    bool isUpdate = false,
+    String? id,
+    MultiSelectController? a,
+    File? documentFile,
+  }) async {
+    debugPrint("Meeting data = $data");
     if (loading) {
       isLoading.value = true;
     }
-    d.Response response;
-    if (isUpdate) {
-      response = await ApiHandler.postRequest(url: "${ApiEndPoint.meeting}/$id", body: data);
-    } else {
-      response = await ApiHandler.postRequest(url: ApiEndPoint.meeting, body: data);
-    }
 
-    if (response.statusCode == 200) {
-      if (response.data["success"] == true) {
-        if (isUpdate) {
-          toastMessage(text: "Meeting Update Successfully", color: AppColors.greenColor, isTop: false);
+    try {
+      var dioClient = ApiHandler.createRequest();
+      var formData = d.FormData();
+
+      // Add all fields from data to formData
+      data.forEach((key, value) {
+        if (value != null) {
+          formData.fields.add(MapEntry(key, value.toString()));
+        }
+      });
+
+      // Add the file if it exists
+      if (documentFile != null && await documentFile.exists()) {
+        formData.files.add(
+          MapEntry(
+            "OtherExpenseDocumentFile",
+            await d.MultipartFile.fromFile(
+              documentFile.path,
+              filename: documentFile.path.split('/').last,
+            ),
+          ),
+        );
+        // Also add the filename to OtherExpenseDocument as per curl if not already there
+        if (!data.containsKey("OtherExpenseDocument")) {
+          formData.fields.add(MapEntry("OtherExpenseDocument", documentFile.path.split('/').last));
+        }
+      }
+
+      String url = isUpdate ? "${ApiEndPoint.meeting}/$id" : ApiEndPoint.meeting;
+      debugPrint("Add/Edit Meeting URL: $url");
+      debugPrint("FormData fields: ${formData.fields}");
+
+      d.Response response = await dioClient.post(
+        url,
+        data: formData,
+        options: d.Options(
+          headers: {
+            'accept': '*/*',
+            'Authorization': "Bearer ${Pref.getToken()}",
+          },
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        var resData = response.data;
+        if (resData is String) {
+          resData = jsonDecode(resData);
+        }
+        if (resData["success"] == true) {
+          if (isUpdate) {
+            toastMessage(text: "Meeting Update Successfully", color: AppColors.greenColor, isTop: false);
+          } else {
+            toastMessage(text: "Meeting added Successfully", color: AppColors.greenColor, isTop: false);
+          }
+          clear(a: a);
+          if (loading) {
+            isLoading.value = false;
+          }
+          Get.back();
         } else {
-          toastMessage(text: "Meeting added Successfully", color: AppColors.greenColor, isTop: false);
+          toastMessage(text: resData["error"]?["message"] ?? "Error occurred", color: AppColors.redColor, isTop: false);
+          if (loading) {
+            isLoading.value = false;
+          }
         }
-        clear(a: a);
-        if (loading) {
-          isLoading.value = false;
-        }
-        Get.back();
       } else {
-        toastMessage(text: response.data["error"]["message"], color: AppColors.redColor, isTop: false);
+        toastMessage(text: "Something went wrong!", color: AppColors.redColor, isTop: false);
         if (loading) {
           isLoading.value = false;
         }
       }
-    } else {
-      toastMessage(text: "Something went wrong!", color: AppColors.redColor, isTop: false);
+    } catch (e) {
+      debugPrint("Add/Edit Meeting API Error: $e");
+      toastMessage(text: "Error: $e", color: AppColors.redColor, isTop: false);
       if (loading) {
         isLoading.value = false;
       }

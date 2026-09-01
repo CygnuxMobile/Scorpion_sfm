@@ -20,9 +20,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   @override
   void initState() {
-    attendanceController.clear();
-    attendanceController.attendanceStatus(loading: true);
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      attendanceController.clear();
+      attendanceController.attendanceStatus(loading: true);
+    });
   }
 
   Widget buildTimeCard({

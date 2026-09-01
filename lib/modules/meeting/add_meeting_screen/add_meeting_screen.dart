@@ -1,11 +1,14 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_places_flutter/google_places_flutter.dart';
 import 'package:google_places_flutter/model/prediction.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:multi_dropdown/multi_dropdown.dart';
+import 'package:scorpforce/modules/expance/add_expense_screen/get_transportmode_responce_model.dart';
 import 'package:scorpforce/modules/meeting/add_meeting_screen/add_meeting_controller.dart';
 import 'package:scorpforce/modules/meeting/add_meeting_screen/model/get_penindia_customer.dart';
 import '../../../config/app_colors.dart';
@@ -135,6 +138,8 @@ class AddMeetingScreenState extends State<AddMeetingScreen> {
     debugPrint("in this");
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (widget.isEdit!) {
+        addMeetingController.getTransportMode();
+        addMeetingController.getOtherExpensesList();
         await addMeetingController
             .editMeeting(
               id: "${widget.attendeeCode}?UserId=${Pref.getUserId()}",
@@ -311,11 +316,11 @@ class AddMeetingScreenState extends State<AddMeetingScreen> {
                         : null,
 
                     child: Container(
-                      decoration: BoxDecoration(color: Colors.transparent),
-                      child: Row(
-                        children: [
-                          Obx(() {
-                            return CustomDropdown<PanIndiaCustomer>(
+                      decoration: const BoxDecoration(color: Colors.transparent),
+                      child: Obx(() {
+                        return Row(
+                          children: [
+                            CustomDropdown<PanIndiaCustomer>(
                               enabled: false,
                               // prefixImage AppImages.companyName,
                               hintText: 'Customer Name*',
@@ -331,10 +336,10 @@ class AddMeetingScreenState extends State<AddMeetingScreen> {
                               },
                               validator: (value) => value == null ? 'Please select a Customer Name' : null,
                               showSearchBox: true,
-                            );
-                          }),
-                        ],
-                      ),
+                            ),
+                          ],
+                        );
+                      }),
                     ),
                   ),
                   Obx(() {
@@ -600,10 +605,10 @@ class AddMeetingScreenState extends State<AddMeetingScreen> {
                   }),
 
                   SizedBox(
-                    child: Row(
-                      children: [
-                        Obx(() {
-                          return CustomDropdown<CallType>(
+                    child: Obx(() {
+                      return Row(
+                        children: [
+                          CustomDropdown<CallType>(
                             enabled: isCreatorCheck(),
                             // prefixImage AppImages.meetingType,
                             hintText: 'Meeting Type*',
@@ -619,16 +624,16 @@ class AddMeetingScreenState extends State<AddMeetingScreen> {
                             },
                             validator: (value) => value == null ? 'Please select a meeting type' : null,
                             showSearchBox: true,
-                          );
-                        }),
-                      ],
-                    ),
+                          ),
+                        ],
+                      );
+                    }),
                   ),
 
                   SizedBox(
                     child: MultiDropdown(
                       enabled: isCreatorCheck(),
-                      closeOnBackButton: true,
+                      closeOnBackButton: false,
                       items: addMeetingController.callUserList.value.map((e) {
                         return DropdownItem(label: "${e.userId} : ${e.name}", value: e);
                       }).toList(),
@@ -690,10 +695,10 @@ class AddMeetingScreenState extends State<AddMeetingScreen> {
                   ),
                   const SizedBox(height: 16),
                   SizedBox(
-                    child: Row(
-                      children: [
-                        Obx(() {
-                          return CustomDropdown<Branch>(
+                    child: Obx(() {
+                      return Row(
+                        children: [
+                          CustomDropdown<Branch>(
                             enabled: isCreatorCheck(),
                             // prefixImage AppImages.meetingLocation,
                             hintText: 'Meeting Location*',
@@ -709,10 +714,10 @@ class AddMeetingScreenState extends State<AddMeetingScreen> {
                             },
                             validator: (value) => value == null ? 'Please select a Meeting Location' : null,
                             showSearchBox: true,
-                          );
-                        }),
-                      ],
-                    ),
+                          ),
+                        ],
+                      );
+                    }),
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -796,7 +801,7 @@ class AddMeetingScreenState extends State<AddMeetingScreen> {
                                   message: "MOM not loaded. Please try again.",
                                 )
                               : MultiDropdown(
-                                  closeOnBackButton: true,
+                                  closeOnBackButton: false,
                                   items: addMeetingController.momList.value!.map((e) {
                                     return DropdownItem(label: e.moM ?? '', value: e);
                                   }).toList(),
@@ -841,18 +846,193 @@ class AddMeetingScreenState extends State<AddMeetingScreen> {
                                     selectedIcon: const Icon(Icons.check_box, color: Colors.green),
                                     disabledIcon: Icon(Icons.lock, color: Colors.grey.shade300),
                                   ),
-                                  /* validator: (value) {
-                                        if (value == null || value.isEmpty) {
-                                          return 'Please select a user';
-                                        }
-                                        return null;
-                                      },*/
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Please select MOM';
+                                    }
+                                    return null;
+                                  },
                                   onSelectionChange: (selectedItems) {
                                     addMeetingController.selectedMom.value = selectedItems;
                                   },
                                 ),
                         ),
                         const SizedBox(height: 16),
+                        Obx(() {
+                          return Row(
+                            children: [
+                              CustomDropdown<TransportMode>(
+                                enabled: true,
+                                hintText: 'Transport Mode*',
+                                items: addMeetingController.transportModeList,
+                                selectedItem: addMeetingController.selectedTransportMode.value,
+                                itemAsString: (TransportMode data) => data.codeDesc,
+                                onChanged: (TransportMode? data) {
+                                  if (data != null) {
+                                    addMeetingController.selectedTransportMode.value = data;
+                                    addMeetingController.transportId.value = data.codeId;
+                                  }
+                                },
+                                validator: (value) => value == null ? 'Please select Transport Mode' : null,
+                                showSearchBox: true,
+                              ),
+                            ],
+                          );
+                        }),
+                        Obx(() {
+                          return Row(
+                            children: [
+                              CustomDropdown<CallType>(
+                                enabled: true,
+                                hintText: 'Other Expenses',
+                                items: addMeetingController.otherExpensesList,
+                                selectedItem: addMeetingController.selectedOtherExpense.value,
+                                itemAsString: (CallType data) => data.codeDesc,
+                                onChanged: (CallType? data) {
+                                  if (data != null) {
+                                    addMeetingController.selectedOtherExpense.value = data;
+                                    addMeetingController.otherExpenseId.value = data.codeId;
+                                  }
+                                },
+                                showSearchBox: true,
+                              ),
+                            ],
+                          );
+                        }),
+                        Obx(() {
+                          final selectedExp = addMeetingController.selectedOtherExpense.value;
+                          if (selectedExp == null) return const SizedBox();
+
+                          final descLower = selectedExp.codeDesc.toLowerCase();
+                          final isToll = descLower.contains("toll");
+                          final isFood = descLower.contains("food");
+
+                          String amountLabel = isToll
+                              ? "Toll Amount"
+                              : (isFood ? "Foody Expenses" : "${selectedExp.codeDesc} Amount");
+                          String uploadLabel = isToll
+                              ? "Upload Toll Slip"
+                              : (isFood ? "Bill upload" : "Upload Supporting Document");
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              commonTextField(
+                                needValidation: true,
+                                validationMessage: "Please Enter Amount",
+                                enabledBorder: AppColors.black,
+                                labelText: amountLabel,
+                                controller: addMeetingController.expenseAmountController.value,
+                                textInputType: TextInputType.number,
+                                horizontalPadding: null,
+                                textColor: AppColors.black,
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () async {
+                                        ImagePicker picker = ImagePicker();
+                                        XFile? file = await picker.pickImage(source: ImageSource.gallery);
+                                        if (file != null) {
+                                          addMeetingController.expenseDocumentFile.value = File(file.path);
+                                        }
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.all(8),
+                                        alignment: Alignment.center,
+                                        height: 100,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.whiteColor,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(color: AppColors.boderColor, width: 1),
+                                        ),
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            const Icon(
+                                              Icons.add_a_photo_outlined,
+                                              size: 28,
+                                              color: AppColors.grey,
+                                            ),
+                                            const SizedBox(height: 5),
+                                            Obx(() => Text(
+                                              "${addMeetingController.expenseDocumentFile.value != null ? "Change " : "Add "}$uploadLabel",
+                                              style: const TextStyle(
+                                                color: AppColors.grey,
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            )),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Obx(() {
+                                    return addMeetingController.expenseDocumentFile.value != null
+                                        ? Row(
+                                            children: [
+                                              const SizedBox(width: 12),
+                                              Container(
+                                                height: 100,
+                                                width: 100,
+                                                decoration: BoxDecoration(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  border: Border.all(color: AppColors.boderColor),
+                                                ),
+                                                child: Stack(
+                                                  children: [
+                                                    ClipRRect(
+                                                      borderRadius: BorderRadius.circular(11),
+                                                      child: Image.file(
+                                                        File(addMeetingController.expenseDocumentFile.value!.path),
+                                                        height: 100,
+                                                        width: 100,
+                                                        fit: BoxFit.cover,
+                                                        errorBuilder: (context, error, stackTrace) {
+                                                          return const Center(
+                                                            child: Icon(Icons.insert_drive_file, size: 40, color: AppColors.grey),
+                                                          );
+                                                        },
+                                                      ),
+                                                    ),
+                                                    Positioned(
+                                                      top: 4,
+                                                      right: 4,
+                                                      child: GestureDetector(
+                                                        onTap: () {
+                                                          addMeetingController.expenseDocumentFile.value = null;
+                                                        },
+                                                        child: Container(
+                                                          padding: const EdgeInsets.all(4),
+                                                          decoration: const BoxDecoration(
+                                                            color: Colors.red,
+                                                            shape: BoxShape.circle,
+                                                          ),
+                                                          child: const Icon(
+                                                            Icons.close,
+                                                            size: 14,
+                                                            color: Colors.white,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          )
+                                        : const SizedBox();
+                                  }),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                          );
+                        }),
                       ],
                     ),
 
@@ -954,46 +1134,72 @@ class AddMeetingScreenState extends State<AddMeetingScreen> {
                           }
 
                           if (_formKey.currentState!.validate()) {
+                            if (widget.isEdit! && widget.isCheckInCheckOutCompleted == AttendanceStatus.completed) {
+                              if (addMeetingController.selectedTransportMode.value == null) {
+                                toastMessage(text: "Please select Transport Mode", color: AppColors.redColor);
+                                return;
+                              }
+                            }
+                            if (addMeetingController.selectedOtherExpense.value != null) {
+                              if (addMeetingController.expenseAmountController.value.text.trim().isEmpty) {
+                                toastMessage(text: "Please enter expense amount", color: AppColors.redColor);
+                                return;
+                              }
+                              if (addMeetingController.expenseDocumentFile.value == null) {
+                                toastMessage(text: "Supporting document / slip upload is mandatory", color: AppColors.redColor);
+                                return;
+                              }
+                            }
                             if (addMeetingController.startTime.value != "" && addMeetingController.endTime.value != "") {
                               var data = {
-                                "meetingTypeId": addMeetingController.meetingTypeId.value,
-                                "meetingDate": addMeetingController.dateController.value.text,
-                                "customerName": addMeetingController.selectedCustomer.value!.customerName,
+                                "MeetingTypeId": addMeetingController.meetingTypeId.value,
+                                "MeetingDate": addMeetingController.dateController.value.text,
+                                "CustomerName": addMeetingController.selectedCustomer.value!.customerName,
                                 if (widget.isFromCustomerScreen! || widget.isMeetingScreenAdd!)
-                                  "customerCode": addMeetingController.selectedCustomer.value!.customerCode,
-                                "leadId": widget.isFromLeadScreen!
+                                  "CustomerCode": addMeetingController.selectedCustomer.value!.customerCode,
+                                "LeadId": widget.isFromLeadScreen!
                                     ? widget.data!.customerId
                                     : widget.isEdit!
                                     ? addMeetingController.customerId.value
                                     : "",
-                                "email": addMeetingController.emailIdController.value.text,
-                                "contactNo": addMeetingController.contactNoController.value.text,
-                                "address": addMeetingController.addressController.value.text,
-                                "contactName": addMeetingController.contactPersonController.value.text,
-                                "meetingPurpose": addMeetingController.meetingPurposeController.value.text,
+                                "Email": addMeetingController.emailIdController.value.text,
+                                "ContactNo": addMeetingController.contactNoController.value.text,
+                                "Address": addMeetingController.addressController.value.text,
+                                "ContactName": addMeetingController.contactPersonController.value.text,
+                                "MeetingPurpose": addMeetingController.meetingPurposeController.value.text,
                                 if (widget.isEdit!)
-                                  "meetingMOM": addMeetingController.selectedMom.value!.isNotEmpty
+                                  "MeetingMOM": addMeetingController.selectedMom.value != null && addMeetingController.selectedMom.value!.isNotEmpty
                                       ? addMeetingController.selectedMom.value!.map((user) => user.moM.toString()).join(',')
                                       : "",
-                                "meetingLocation": addMeetingController.selectedBranch.value!.locCode,
-                                "geoLocation": addMeetingController.meetingLocationController.value.text,
-                                "startTime": addMeetingController.startTimeController.value.text,
-                                "endTime": addMeetingController.endTimeController.value.text,
-                                "latitude": addMeetingController.latitude.value,
-                                "longitude": addMeetingController.longitude.value,
-                                "remarks": addMeetingController.remarksController.value.text,
-                                "attendeeIDs": addMeetingController.selectedUser.value != null && addMeetingController.selectedUser.value != []
+                                "TransportMode": addMeetingController.transportId.value ?? "",
+                                "OtherExpenses": addMeetingController.otherExpenseId.value ?? "",
+                                "OtherExpenseAmt": addMeetingController.expenseAmountController.value.text,
+                                "OtherExpenseDocument": addMeetingController.expenseDocumentFile.value != null
+                                    ? addMeetingController.expenseDocumentFile.value!.path.split('/').last
+                                    : "",
+                                "MeetingLocation": addMeetingController.selectedBranch.value!.locCode,
+                                "GeoLocation": addMeetingController.meetingLocationController.value.text,
+                                "StartTime": addMeetingController.startTimeController.value.text,
+                                "EndTime": addMeetingController.endTimeController.value.text,
+                                "Latitude": addMeetingController.latitude.value,
+                                "Longitude": addMeetingController.longitude.value,
+                                "Remarks": addMeetingController.remarksController.value.text,
+                                "AttendeeIDs": addMeetingController.selectedUser.value != null && addMeetingController.selectedUser.value != []
                                     ? addMeetingController.selectedUser.value!.map((user) => user.userId.toString()).join(',')
                                     : "",
-                                "isAllDayEvent": addMeetingController.isAllDayEvent.value,
+                                "IsAllDayEvent": addMeetingController.isAllDayEvent.value,
                                 "CreateBy": widget.isEdit! ? addMeetingController.createByController.value.text : Pref.getUserId(),
+                                "CreatedBy": widget.isEdit! ? addMeetingController.createByController.value.text : Pref.getUserId(),
+                                "UserId": Pref.getUserId(),
+                                "MeetingRole": "Attendee",
                                 "ModifiedBy": widget.isEdit! ? Pref.getUserId() : "",
-                                if (widget.isEdit!) "attendeeCode": widget.attendeeCode,
-                                if (widget.isEdit!) "distanceInKM": addMeetingController.distanceInKm.value,
+                                if (widget.isEdit!) "AttendeeCode": widget.attendeeCode,
+                                if (widget.isEdit!) "DistanceInKM": addMeetingController.distanceInKm.value,
                               };
                               debugPrint("meeting data == $data");
                               await addMeetingController.addMeeting(
                                 data: data,
+                                documentFile: addMeetingController.expenseDocumentFile.value,
                                 a: addMeetingController.controller.value,
                                 loading: true,
                                 id: widget.attendeeCode,

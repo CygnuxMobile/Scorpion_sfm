@@ -1,9 +1,13 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_instance/src/extension_instance.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:multi_dropdown/multi_dropdown.dart';
+import 'package:scorpforce/modules/expance/add_expense_screen/get_transportmode_responce_model.dart';
 import 'package:scorpforce/modules/meeting_mom/meeting_mom_controller.dart';
+import 'package:scorpforce/modules/my_call/add_my_call_screen/call_module_response_model.dart';
 import 'package:scorpforce/modules/widget/button_view.dart';
 import 'package:scorpforce/modules/widget/toast_message.dart';
 
@@ -31,6 +35,8 @@ class _MeetingMomScreenState extends State<MeetingMomScreen> {
 
   }
   Future<void> getData() async{
+    meetingMomController.getTransportMode();
+    meetingMomController.getOtherExpensesList();
     meetingMomController.getMomList();
     await meetingMomController.meetingMomApi();
   }
@@ -94,7 +100,7 @@ class _MeetingMomScreenState extends State<MeetingMomScreen> {
                       children: [
                         SizedBox(
                           child: MultiDropdown(
-                            closeOnBackButton: true,
+                            closeOnBackButton: false,
                             items: meetingMomController.momList.value!.map((e) {
                               return DropdownItem(label: e.moM!, value: e);
                             }).toList(),
@@ -145,6 +151,188 @@ class _MeetingMomScreenState extends State<MeetingMomScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Obx(() {
+                              return CustomDropdown<TransportMode>(
+                                enabled: true,
+                                hintText: 'Transport Mode*',
+                                items: meetingMomController.transportModeList,
+                                selectedItem: item.selectedTransportMode.value,
+                                itemAsString: (TransportMode data) => data.codeDesc,
+                                onChanged: (TransportMode? data) {
+                                  if (data != null) {
+                                    item.selectedTransportMode.value = data;
+                                    item.transportId.value = data.codeId;
+                                    meetingMomController.meetingMomList.refresh();
+                                  }
+                                },
+                                validator: (value) => value == null ? 'Please select Transport Mode' : null,
+                                showSearchBox: true,
+                              );
+                            }),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            Obx(() {
+                              return CustomDropdown<CallType>(
+                                enabled: true,
+                                hintText: 'Other Expenses',
+                                items: meetingMomController.otherExpensesList,
+                                selectedItem: item.selectedOtherExpense.value,
+                                itemAsString: (CallType data) => data.codeDesc,
+                                onChanged: (CallType? data) {
+                                  if (data != null) {
+                                    item.selectedOtherExpense.value = data;
+                                    item.otherExpenseId.value = data.codeId;
+                                    meetingMomController.meetingMomList.refresh();
+                                  }
+                                },
+                                showSearchBox: true,
+                              );
+                            }),
+                          ],
+                        ),
+                        Obx(() {
+                          final selectedExp = item.selectedOtherExpense.value;
+                          if (selectedExp == null) return const SizedBox();
+
+                          final descLower = selectedExp.codeDesc.toLowerCase();
+                          final isToll = descLower.contains("toll");
+                          final isFood = descLower.contains("food");
+
+                          String amountLabel = isToll
+                              ? "Toll Amount"
+                              : (isFood ? "Foody Expenses" : "${selectedExp.codeDesc} Amount");
+                          String uploadLabel = isToll
+                              ? "Upload Toll Slip"
+                              : (isFood ? "Bill upload" : "Upload Supporting Document");
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              commonTextField(
+                                needValidation: true,
+                                validationMessage: "Please Enter Amount",
+                                enabledBorder: AppColors.black,
+                                labelText: amountLabel,
+                                controller: item.expenseAmountController.value,
+                                textInputType: TextInputType.number,
+                                horizontalPadding: null,
+                                textColor: AppColors.black,
+                                onChange: (v) {
+                                  meetingMomController.meetingMomList.refresh();
+                                },
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () async {
+                                        ImagePicker picker = ImagePicker();
+                                        XFile? file = await picker.pickImage(source: ImageSource.gallery);
+                                        if (file != null) {
+                                          item.expenseDocumentFile.value = File(file.path);
+                                          meetingMomController.meetingMomList.refresh();
+                                        }
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.all(8),
+                                        alignment: Alignment.center,
+                                        height: 100,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.whiteColor,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(color: AppColors.boderColor, width: 1),
+                                        ),
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            const Icon(
+                                              Icons.add_a_photo_outlined,
+                                              size: 28,
+                                              color: AppColors.grey,
+                                            ),
+                                            const SizedBox(height: 5),
+                                            Obx(() => Text(
+                                              "${item.expenseDocumentFile.value != null ? "Change " : "Add "}$uploadLabel",
+                                              style: const TextStyle(
+                                                color: AppColors.grey,
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            )),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Obx(() {
+                                    return item.expenseDocumentFile.value != null
+                                        ? Row(
+                                            children: [
+                                              const SizedBox(width: 12),
+                                              Container(
+                                                height: 100,
+                                                width: 100,
+                                                decoration: BoxDecoration(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  border: Border.all(color: AppColors.boderColor),
+                                                ),
+                                                child: Stack(
+                                                  children: [
+                                                    ClipRRect(
+                                                      borderRadius: BorderRadius.circular(11),
+                                                      child: Image.file(
+                                                        File(item.expenseDocumentFile.value!.path),
+                                                        height: 100,
+                                                        width: 100,
+                                                        fit: BoxFit.cover,
+                                                        errorBuilder: (context, error, stackTrace) {
+                                                          return const Center(
+                                                            child: Icon(Icons.insert_drive_file, size: 40, color: AppColors.grey),
+                                                          );
+                                                        },
+                                                      ),
+                                                    ),
+                                                    Positioned(
+                                                      top: 4,
+                                                      right: 4,
+                                                      child: GestureDetector(
+                                                        onTap: () {
+                                                          item.expenseDocumentFile.value = null;
+                                                          meetingMomController.meetingMomList.refresh();
+                                                        },
+                                                        child: Container(
+                                                          padding: const EdgeInsets.all(4),
+                                                          decoration: const BoxDecoration(
+                                                            color: Colors.red,
+                                                            shape: BoxShape.circle,
+                                                          ),
+                                                          child: const Icon(
+                                                            Icons.close,
+                                                            size: 14,
+                                                            color: Colors.white,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          )
+                                        : const SizedBox();
+                                  }),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                          );
+                        }),
                       ],
                     ),
                     SizedBox(
@@ -173,17 +361,25 @@ class _MeetingMomScreenState extends State<MeetingMomScreen> {
                         toastMessage(text: "Please enter remarks", color: AppColors.redColor);
                       }else if(item.controller.selectedItems.isEmpty){
                         toastMessage(text: "Please select MOM", color: AppColors.redColor);
+                      }else if(item.selectedTransportMode.value == null){
+                        toastMessage(text: "Please select Transport Mode", color: AppColors.redColor);
+                      }else if(item.selectedOtherExpense.value != null && item.expenseAmountController.value.text.trim().isEmpty){
+                        toastMessage(text: "Please enter expense amount", color: AppColors.redColor);
+                      }else if(item.selectedOtherExpense.value != null && item.expenseDocumentFile.value == null){
+                        toastMessage(text: "Supporting document / slip upload is mandatory", color: AppColors.redColor);
                       }else{
-                        var data = {
-                          "meetingId": item.meetingId,
-                          "meetingMOM": item.selectedMOM.map((e)=>e.moM).toList().join(","),
-                          "remarks": item.remarksController.value.text
-                        };
-                        // debugPrint("data === $data");
                         item.isLoading.value = true;
                         meetingMomController.meetingMomList.refresh();
-                        // await Future.delayed(Duration(seconds: 5));
-                        await meetingMomController.submitMeetingMom(data);
+                        await meetingMomController.submitMeetingMom(
+                          meetingId: item.meetingId,
+                          meetingMom: item.selectedMOM.map((e) => e.moM).toList().join(","),
+                          attendeeCode: item.attendeeCode,
+                          remarks: item.remarksController.value.text,
+                          transportMode: item.transportId.value ?? "",
+                          otherExpenses: item.otherExpenseId.value ?? "",
+                          otherExpenseAmt: item.expenseAmountController.value.text,
+                          documentFile: item.expenseDocumentFile.value,
+                        );
                         item.isLoading.value = false;
                         meetingMomController.meetingMomList.refresh();
                       }

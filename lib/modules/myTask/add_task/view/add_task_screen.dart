@@ -190,7 +190,7 @@ class AddTaskScreenState extends State<AddTaskScreen> {
                   Obx(() {
                     return addTaskController.userList.isNotEmpty
                         ? MultiDropdown(
-                            closeOnBackButton: true,
+                            closeOnBackButton: false,
                             items: addTaskController.userList.map((e) {
                               return DropdownItem(label: "${e.userId} : ${e.name}", value: e);
                             }).toList(),

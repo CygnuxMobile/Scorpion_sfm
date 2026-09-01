@@ -1,0 +1,3 @@
+- [x] Research MOM field validation
+- [x] Restore MOM field validation in `add_meeting_screen.dart`
+- [x] Verify validation message
