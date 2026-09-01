@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:scorpforce/modules/login/login_controller.dart';
 import '../../config/app_colors.dart';
@@ -218,21 +219,109 @@ class LoginScreenState extends State<LoginScreen> {
                     ),*/
                       ),
                   const SizedBox(height: 40),
-                  Center(
-                    child: Column(
-                      children: [
-                        const Text(
-                          "Device ID:",
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black54),
-                        ),
-                        const SizedBox(height: 4),
-                        SelectableText(
-                          loginController.deviceId.value.isEmpty ? "Fetching..." : loginController.deviceId.value,
-                          style: const TextStyle(fontSize: 14, color: AppColors.primaryColor, fontWeight: FontWeight.w600),
-                        ),
-                      ],
+                  // Device ID Card
+                  if (loginController.deviceId.value.isNotEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.boderColor),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.phone_android, size: 18, color: Colors.black45),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Device ID',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.black45,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  // Show first 8 chars + "..." + last 4 chars for preview
+                                  '${loginController.deviceId.value.substring(0, 8)}...${loginController.deviceId.value.substring(loginController.deviceId.value.length - 4)}',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.primaryColor,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Copy button
+                          GestureDetector(
+                            onTap: () {
+                              Clipboard.setData(
+                                ClipboardData(text: loginController.deviceId.value),
+                              );
+                              Get.snackbar(
+                                'Copied!',
+                                'Device ID copied to clipboard',
+                                snackPosition: SnackPosition.BOTTOM,
+                                backgroundColor: Colors.black87,
+                                colorText: Colors.white,
+                                duration: const Duration(seconds: 2),
+                                margin: const EdgeInsets.all(12),
+                                borderRadius: 8,
+                                icon: const Icon(Icons.copy, color: Colors.white, size: 18),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryColor,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.copy, size: 14, color: Colors.white),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Copy',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                  ] else ...[
+                    // Loading state
+                    const Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 12,
+                            height: 12,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Fetching Device ID...',
+                            style: TextStyle(fontSize: 12, color: Colors.black45),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             );

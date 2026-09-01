@@ -1,19 +1,15 @@
 import 'dart:convert';
-import 'dart:io';
 
-import 'package:android_id/android_id.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:scorpforce/modules/login/login_model.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../config/app_colors.dart';
 import '../../config/app_shared_key.dart';
 import '../../config/app_url.dart';
 import '../../main.dart';
 import '../../utils/api_handler.dart';
+import '../../utils/device_fingerprint_service.dart';
 import '../dashbord/dashbord_screen.dart';
 import '../widget/toast_message.dart';
 
@@ -24,71 +20,64 @@ class LoginController extends GetxController {
   RxBool obSecure = true.obs;
   RxString deviceId = "".obs;
 
-  final _secureStorage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-      sharedPreferencesName: 'PermanentDeviceStorage',
-    ),
-  );
-
   @override
   void onInit() {
-    getDeviceId();
+    _prefetchFingerprint();
     super.onInit();
   }
 
-  Future<String> getDeviceId() async {
-    ApiHandler.logger.i("[DEVICE_ID_DEBUG] Starting permanent device ID fetch");
-    
-    String? permanentId = await _secureStorage.read(key: 'permanent_device_id');
-    
-    if (permanentId != null && permanentId.isNotEmpty) {
-      ApiHandler.logger.i("[DEVICE_ID_DEBUG] Found existing permanent ID: $permanentId");
-      deviceId.value = permanentId;
-      return permanentId;
-    }
-
-    String? finalId;
-    try {
-      if (Platform.isAndroid) {
-        final androidIdResult = await const AndroidId().getId();
-        if (androidIdResult != null && androidIdResult.isNotEmpty) {
-          finalId = androidIdResult;
-        }
-      }
-      
-      // If Android ID failed or we are on iOS, generate a UUID
-      if (finalId == null || finalId.isEmpty) {
-        finalId = const Uuid().v4();
-        ApiHandler.logger.i("[DEVICE_ID_DEBUG] Generated new UUID: $finalId");
-      }
-    } catch (e) {
-      finalId = const Uuid().v4();
-      ApiHandler.logger.e("[DEVICE_ID_DEBUG] Error during ID generation, using UUID: $e");
-    }
-
-    // 3. Save to Secure Storage for future use
-    await _secureStorage.write(key: 'permanent_device_id', value: finalId);
-
-    deviceId.value = finalId;
-    ApiHandler.logger.i("[DEVICE_ID_DEBUG] Final selected device ID: $finalId");
-    return finalId;
+  /// Pre-fetch and cache the fingerprint on controller init so login() is fast.
+  Future<void> _prefetchFingerprint() async {
+    final fp = await DeviceFingerprintService.getStableFingerprint();
+    deviceId.value = fp;
   }
 
   Future<void> login() async {
     try {
       isLoading.value = true;
-      String deviceId = await getDeviceId();
-      ApiHandler.logger.i("[DEVICE_ID_DEBUG] Device ID before login API: $deviceId");
 
-      var loginBody = {
+      // ── Step 1: Emulator check ─────────────────────────────────────────
+      final onEmulator = await DeviceFingerprintService.isEmulator();
+      if (onEmulator) {
+        isLoading.value = false;
+        _showBlockDialog(
+          title: '🚫 Emulator Detected',
+          message:
+              'This app cannot be used on an emulator.\nPlease use a real device to login.',
+        );
+        ApiHandler.logger.w('[SECURITY] Login blocked — emulator detected');
+        return;
+      }
+
+      // ── Step 2: Root / Jailbreak check ────────────────────────────────
+      final isRooted = await DeviceFingerprintService.isRootedOrJailbroken();
+      if (isRooted) {
+        ApiHandler.logger.w('[SECURITY] Rooted / jailbroken device detected');
+        // Show warning but still allow login — admin can decide to block later
+        toastMessage(
+          text: '⚠️ Warning: Rooted device detected. Contact your administrator.',
+          color: AppColors.redColor,
+          isTop: true,
+        );
+      }
+
+      // ── Step 3: Get stable hardware fingerprint ───────────────────────
+      final fingerprint = await DeviceFingerprintService.getStableFingerprint();
+      deviceId.value = fingerprint;
+      ApiHandler.logger.i('[SECURITY] Device fingerprint: $fingerprint');
+
+      // ── Step 4: Call login API ─────────────────────────────────────────
+      final loginBody = {
         "username": emailController.value.text,
         "password": passwordController.value.text,
-        "deviceId": deviceId,
+        "deviceId": fingerprint,
       };
-      ApiHandler.logger.i("[DEVICE_ID_DEBUG] Device ID sent in API request: ${loginBody['deviceId']}");
+      ApiHandler.logger.i('[SECURITY] Login API deviceId: ${loginBody['deviceId']}');
 
-      var response = await ApiHandler.postRequest(url: ApiEndPoint.login, body: loginBody);
+      final response = await ApiHandler.postRequest(
+        url: ApiEndPoint.login,
+        body: loginBody,
+      );
 
       if (response.statusCode == 200) {
         if (response.data["isSuccess"] == true) {
@@ -113,10 +102,11 @@ class LoginController extends GetxController {
           isLoading.value = false;
           String message = response.data["message"] ?? "Invalid Credential";
           if (message == "User name or password incorrect") {
-            message = "Invalid Credentials or Device ID not registered.\nDevice ID: $deviceId";
+            message =
+                "Invalid Credentials or Device ID not registered.\nDevice ID: $fingerprint";
           }
           toastMessage(text: message, color: AppColors.redColor, isTop: false);
-          ApiHandler.logger.w("not done: $message");
+          ApiHandler.logger.w("Login failed: $message");
         }
       } else {
         isLoading.value = false;
@@ -125,10 +115,11 @@ class LoginController extends GetxController {
           message = response.data["message"];
         }
         if (message == "User name or password incorrect") {
-          message = "Invalid Credentials or Device ID not registered.\nDevice ID: $deviceId";
+          message =
+              "Invalid Credentials or Device ID not registered.\nDevice ID: $fingerprint";
         }
         toastMessage(text: message, color: AppColors.redColor, isTop: false);
-        ApiHandler.logger.e("not done ${response.statusCode}: $message");
+        ApiHandler.logger.e("Login failed ${response.statusCode}: $message");
       }
     } catch (e, stackTrace) {
       isLoading.value = false;
@@ -136,5 +127,22 @@ class LoginController extends GetxController {
       ApiHandler.logger.e("Login Error: $e");
       ApiHandler.logger.e("STACK TRACE: $stackTrace");
     }
+  }
+
+  /// Shows a blocking dialog when login is not allowed (e.g. emulator).
+  void _showBlockDialog({required String title, required String message}) {
+    Get.dialog(
+      AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
   }
 }
