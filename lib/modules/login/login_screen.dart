@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -230,7 +232,11 @@ class LoginScreenState extends State<LoginScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.phone_android, size: 18, color: Colors.black45),
+                          Icon(
+                            Platform.isIOS ? Icons.phone_iphone : Icons.phone_android,
+                            size: 18,
+                            color: Colors.black45,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Column(

@@ -1,8 +1,8 @@
 import 'package:scorpforce/config/app_shared_key.dart';
 
 class ApiEndPoint {
-  // static String baseUrl = "https://sfmapi-sepl.cygnux.in/api/v1/"; ///live
-  static String baseUrl = "https://sfmuatapi.cygnux.in/api/v1/";
+  static String baseUrl = "https://sfmapi-sepl.cygnux.in/api/v1/"; ///live
+  // static String baseUrl = "https://sfmuatapi.cygnux.in/api/v1/";
 
   ///test
   static String meeting = "${baseUrl}Meeting";
