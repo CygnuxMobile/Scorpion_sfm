@@ -364,7 +364,7 @@ class AddMeetingController extends GetxController {
         }
       }
 
-      String url = isUpdate ? "${ApiEndPoint.meeting}/$id" : ApiEndPoint.meeting;
+      String url = "${ApiEndPoint.meeting}/$id";
       debugPrint("Add/Edit Meeting URL: $url");
       debugPrint("FormData fields: ${formData.fields}");
 
@@ -377,7 +377,7 @@ class AddMeetingController extends GetxController {
             'Authorization': "Bearer ${Pref.getToken()}",
           },
         ),
-      );
+      );https://sfmapi-sepl.cygnux.in/api/v1/Meeting/null
 
       if (response.statusCode == 200) {
         var resData = response.data;
