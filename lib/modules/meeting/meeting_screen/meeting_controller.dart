@@ -166,42 +166,6 @@ class MeetingController extends GetxController {
     }
   }
 
-  // Future<double> getDrivingDistance({
-  //   required String origin,
-  //   required String destination,
-  // }) async {
-  //   print("0000000000000: Enter $origin : $destination");
-  //
-  //   final url =
-  //       'https://maps.googleapis.com/maps/api/distancematrix/json?origins=$origin&destinations=$destination&avoid=ferries&mode=driving&key=AIzaSyAMPBtu5A1HbgJuxwzj-y6mcqCIj0vf5cA';
-  //
-  //   try {
-  //     final response = await http.get(Uri.parse(url));
-  //
-  //     if (response.statusCode == 200) {
-  //       final data = json.decode(response.body);
-  //
-  //       if (data['status'] == 'OK' &&
-  //           data['rows'] != null &&
-  //           data['rows'].isNotEmpty &&
-  //           data['rows'][0]['elements'] != null &&
-  //           data['rows'][0]['elements'].isNotEmpty &&
-  //           data['rows'][0]['elements'][0]['status'] == 'OK') {
-  //
-  //         final distanceMeters = data['rows'][0]['elements'][0]['distance']['value'];
-  //         return distanceMeters / 1000; // KM માં return
-  //       } else {
-  //         print("Distance data not found or status not OK");
-  //       }
-  //     } else {
-  //       print("HTTP Error: ${response.statusCode}");
-  //     }
-  //   } catch (e) {
-  //     print("Failed to fetch data: $e");
-  //   }
-  //
-  //   return 0.0;
-  // }
   Future<double> getDrivingDistance({required String origin, required String destination}) async {
     ApiHandler.logger.i("Driving Distance API Enter: $origin to $destination");
 
@@ -214,9 +178,6 @@ class MeetingController extends GetxController {
 
     final url = 'https://scorpion.nextapi.in/api/get/distance?api_key=zck096ek4f43bza1rscb&origin_lat=$originLat&origin_lng=$originLng&dest_lat=$destLat&dest_lng=$destLng';
     ApiHandler.logger.i("Driving Distance URL: $url");
-
-    // final url =
-    //     'https://maps.googleapis.com/maps/api/distancematrix/json?origins=$origin&destinations=$destination&avoid=ferries&mode=driving&key=AIzaSyAMPBtu5A1HbgJuxwzj-y6mcqCIj0vf5cA';
 
     try {
       final response = await http.get(Uri.parse(url), headers: {'Accept': 'application/json'});
@@ -232,22 +193,6 @@ class MeetingController extends GetxController {
         } else {
           ApiHandler.logger.e("Distance data not found or success is false");
         }
-
-        // if (data['status'] == 'OK' &&
-        //     data['rows'] != null &&
-        //     data['rows'].isNotEmpty &&
-        //     data['rows'][0]['elements'] != null &&
-        //     data['rows'][0]['elements'].isNotEmpty &&
-        //     data['rows'][0]['elements'][0]['status'] == 'OK') {
-        //   final distanceMeters = data['rows'][0]['elements'][0]['distance']['value'];
-        //
-        //   final distanceKm = distanceMeters / 1000;
-        //
-        //   // ✅ rounding rule
-        //   return distanceKm.round().toDouble();
-        // } else {
-        //   ApiHandler.logger.e("Distance data not found or status not OK: ${data['status']}");
-        // }
       } else {
         ApiHandler.logger.e("HTTP Error: ${response.statusCode}");
       }
@@ -262,10 +207,6 @@ class MeetingController extends GetxController {
     final String url = 'https://scorpion.nextapi.in/api/get/address?lat=$latitude&lng=$longitude&api_key=zck096ek4f43bza1rscb';
     ApiHandler.logger.i("Get Address URL: $url");
 
-    // final String url =
-    //     "https://maps.googleapis.com/maps/api/geocode/json"
-    //     "?latlng=$latitude,$longitude"
-    //     "&key=AIzaSyAMPBtu5A1HbgJuxwzj-y6mcqCIj0vf5cA";
 
     try {
       final response = await http.get(Uri.parse(url), headers: {'Accept': 'application/json'});
@@ -278,16 +219,6 @@ class MeetingController extends GetxController {
           return data["data"]["address"] ?? "Address not found";
         }
       }
-
-      // final response = await ApiHandler.getRequest(url);
-      //
-      // if (response.statusCode == 200) {
-      //   final data = json.decode(response.data);
-      //
-      //   if (data["results"] != null && data["results"].isNotEmpty) {
-      //     return data["results"][0]["formatted_address"];
-      //   }
-      // }
     } catch (e) {
       ApiHandler.logger.e("Failed to fetch address: $e");
     }
