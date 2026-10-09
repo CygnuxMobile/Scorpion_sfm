@@ -63,14 +63,24 @@ class LoginController extends GetxController {
 
       // ── Step 3: Get stable hardware fingerprint ───────────────────────
       final fingerprint = await DeviceFingerprintService.getStableFingerprint();
-      deviceId.value = fingerprint;
       ApiHandler.logger.i('[SECURITY] Device fingerprint: $fingerprint');
+
+      // ── Step 3b: Combine fingerprint + userId for collision-proof ID ──
+      // Even if 2 users share the same device fingerprint (same-ROM devices),
+      // their combined ID will always be different because userId differs.
+      final username   = emailController.value.text.trim().toLowerCase();
+      final combinedId = DeviceFingerprintService.generateCombinedId(
+        deviceFingerprint: fingerprint,
+        userId: username,
+      );
+      deviceId.value = combinedId;
+      ApiHandler.logger.i('[SECURITY] Combined device ID (sent to server): $combinedId');
 
       // ── Step 4: Call login API ─────────────────────────────────────────
       final loginBody = {
         "username": emailController.value.text,
         "password": passwordController.value.text,
-        "deviceId": fingerprint,
+        "deviceId": combinedId,        // ← Combined ID (fingerprint + userId)
       };
       ApiHandler.logger.i('[SECURITY] Login API deviceId: ${loginBody['deviceId']}');
 
